@@ -1,9 +1,11 @@
-from abc import abstractmethod, ABC
-from typing import Protocol, Generic, TypeVar
+from abc import ABC, abstractmethod
+from typing import Generic, Protocol, TypeVar
 
 from annet.annlib.netdev.views.hardware import HardwareView
+
 from .manufacturer import get_breed, get_hw
-from .models import NetboxDevice, Interface, IpAddress, Prefix
+from .models import ConnectDetails, Interface, IpAddress, NetboxDevice, Prefix
+
 
 NetboxDeviceT = TypeVar("NetboxDeviceT", bound=NetboxDevice)
 InterfaceT = TypeVar("InterfaceT", bound=Interface)
@@ -28,6 +30,13 @@ def get_device_hw(device: NetboxDeviceT) -> HardwareView:
             device.platform.name if device.platform else "",
         )
     return HardwareView("", "")
+
+
+def get_connect_details(device: NetboxDeviceT) -> ConnectDetails:
+    custom_fields = device.custom_fields or {}
+    fqdn = custom_fields.get("slurpit_fqdn", "")
+    port = custom_fields.get("custom_ssh_port", 22)
+    return ConnectDetails(fqdn=fqdn, port=port)
 
 
 class NetboxAdapter(ABC, Generic[NetboxDeviceT, InterfaceT, IpAddressT, PrefixT]):

@@ -4,9 +4,10 @@ import json
 import re
 import textwrap
 from collections import OrderedDict as odict
-from typing import TYPE_CHECKING, Any, Dict, Iterable, Optional, Tuple, List
+from typing import TYPE_CHECKING, Any, Dict, Iterable, List, Optional, Tuple
 
 from annet.annlib.types import Op
+
 
 if TYPE_CHECKING:
     from annet.annlib.patching import PatchTree
@@ -76,11 +77,7 @@ class CommonFormatter:
         return list(filter(None, text.split("\n")))
 
     def join(self, config: "PatchTree"):
-        return "\n".join(
-            _filtered_block_marks(
-                self._indent_blocks(self._blocks(config, is_patch=False))
-            )
-        )
+        return "\n".join(_filtered_block_marks(self._indent_blocks(self._blocks(config, is_patch=False))))
 
     def diff_generator(self, diff):
         yield from self._diff_lines(diff)
@@ -89,11 +86,7 @@ class CommonFormatter:
         return list(self.diff_generator(diff))
 
     def patch(self, patch: "PatchTree") -> str:
-        return "\n".join(
-            _filtered_block_marks(
-                self._indent_blocks(self._blocks(patch, is_patch=True))
-            )
-        )
+        return "\n".join(_filtered_block_marks(self._indent_blocks(self._blocks(patch, is_patch=True))))
 
     def cmd_paths(self, patch: "PatchTree") -> odict:
         ret = odict()
@@ -120,7 +113,7 @@ class CommonFormatter:
             Op.MOVED: ">",
             Op.AFFECTED: " ",
         }
-        for (flag, row, children, _) in diff:
+        for flag, row, children, _ in diff:
             sign = sign_map[flag]
             if not children:
                 yield "%s %s%s" % (sign, self._indent * _level, row + self._statement_end)
@@ -144,12 +137,7 @@ class CommonFormatter:
                 row = self._indent * _level + row
             yield row
 
-    def blocks_and_context(
-        self,
-        tree: "PatchTree",
-        is_patch: bool,
-        context: Optional[FormatterContext] = None
-    ):
+    def blocks_and_context(self, tree: "PatchTree", is_patch: bool, context: Optional[FormatterContext] = None):
         if context is None:
             context = FormatterContext()
 
@@ -172,9 +160,7 @@ class CommonFormatter:
 
             if sub_config or (is_patch and sub_config is not None):
                 yield BlockBegin, None
-                yield from self.blocks_and_context(
-                    sub_config, is_patch, context=FormatterContext(parent=context)
-                )
+                yield from self.blocks_and_context(sub_config, is_patch, context=FormatterContext(parent=context))
                 yield BlockEnd, None
 
     def _blocks(self, tree: "PatchTree", is_patch: bool):
@@ -273,9 +259,7 @@ class CiscoFormatter(BlockExitFormatter):
     def __init__(self, indent="  "):
         super().__init__("exit", indent)
 
-    def _split_indent(
-        self, line: str, indent: int, block_exit_strings: List[str]
-    ) -> Tuple[List[str], int]:
+    def _split_indent(self, line: str, indent: int, block_exit_strings: List[str]) -> Tuple[List[str], int]:
         """
         The small helper calculates indent shift based on block exit string.
         If configuration line has non-default block exit string it means that
@@ -296,9 +280,7 @@ class CiscoFormatter(BlockExitFormatter):
             block_exit_strings.remove(line.strip())
             return block_exit_strings, indent
 
-        block_exit_wrapped = [
-            v for v in self.block_exit(FormatterContext(current=(line.strip(), {})))
-        ]
+        block_exit_wrapped = [v for v in self.block_exit(FormatterContext(current=(line.strip(), {})))]
 
         if not block_exit_wrapped or len(block_exit_wrapped) != 3:
             return block_exit_strings, indent
@@ -316,9 +298,7 @@ class CiscoFormatter(BlockExitFormatter):
         block_exit_strings = [self._block_exit]
         tree = self.split_remove_spaces(text)
         for i, item in enumerate(tree):
-            block_exit_strings, new_indent = self._split_indent(
-                item, additional_indent, block_exit_strings
-            )
+            block_exit_strings, new_indent = self._split_indent(item, additional_indent, block_exit_strings)
             tree[i] = f"{' ' * additional_indent}{item}"
             additional_indent = new_indent
         return tree
@@ -425,13 +405,7 @@ class JuniperFormatter(CommonFormatter):
 
         @classmethod
         def loads(cls, value: str):
-            return cls(
-                **json.loads(
-                    value.removeprefix(cls.begin)
-                    .removesuffix(cls.end)
-                    .strip()
-                )
-            )
+            return cls(**json.loads(value.removeprefix(cls.begin).removesuffix(cls.end).strip()))
 
         def dumps(self):
             return json.dumps({"row": self.row, "comment": self.comment})
@@ -452,7 +426,7 @@ class JuniperFormatter(CommonFormatter):
         )
 
     def sub_regexs(self, value: str) -> str:
-        for (regex, repl_line) in self._sub_regexs:
+        for regex, repl_line in self._sub_regexs:
             value = regex.sub(repl_line, value)
         return value
 
@@ -524,24 +498,16 @@ class JuniperFormatter(CommonFormatter):
                     cmds = (
                         f"edit {' '.join(_prev)}",
                         " ".join(("annotate", context["row"].split(" ")[0], f'"{value}"')),
-                        "exit"
+                        "exit",
                     )
                 elif key.startswith("delete"):
-                    cmds = (
-                        " ".join(("delete", *_prev, key.replace("delete", "", 1).strip())),
-                    )
+                    cmds = (" ".join(("delete", *_prev, key.replace("delete", "", 1).strip())),)
                 elif key.startswith("activate"):
-                    cmds = (
-                        " ".join(("activate", *_prev, key.replace("activate", "", 1).strip())),
-                    )
+                    cmds = (" ".join(("activate", *_prev, key.replace("activate", "", 1).strip())),)
                 elif key.startswith("deactivate"):
-                    cmds = (
-                        " ".join(("deactivate", *_prev, key.replace("deactivate", "", 1).strip())),
-                    )
+                    cmds = (" ".join(("deactivate", *_prev, key.replace("deactivate", "", 1).strip())),)
                 else:
-                    cmds = (
-                        " ".join((self.patch_set_prefix, *_prev, key.strip())),
-                    )
+                    cmds = (" ".join((self.patch_set_prefix, *_prev, key.strip())),)
 
                 # Expanding [ a b c ] junipers list of arguments
                 for cmd in cmds:
@@ -646,12 +612,7 @@ class RosFormatter(CommonFormatter):
     def patch_plain(self, patch):
         return list(self.cmd_paths(patch).keys())
 
-    def blocks_and_context(
-        self,
-        tree: "PatchTree",
-        is_patch: bool,
-        context: Optional[FormatterContext] = None
-    ):
+    def blocks_and_context(self, tree: "PatchTree", is_patch: bool, context: Optional[FormatterContext] = None):
         rows = []
 
         if is_patch:
@@ -687,9 +648,7 @@ class RosFormatter(CommonFormatter):
 
                     yield BlockBegin, None
                     yield from self.blocks_and_context(
-                        sub_config,
-                        is_patch,
-                        context=FormatterContext(parent=context, current=(prow, row_context))
+                        sub_config, is_patch, context=FormatterContext(parent=context, current=(prow, row_context))
                     )
                     yield BlockEnd, None
 
@@ -704,8 +663,10 @@ class RosFormatter(CommonFormatter):
             line = new_line
 
     def _splitter_file(self, lines):
-        filedesrc_re = re.compile(r"^\s+(?P<num>\d+)\s+name=\"(?P<name>[^\"]+)\"\s+type=\"(?P<type>[^\"]+)\""
-                                  r"\s+(size=(?P<size>.*))?creation-time=(?P<time>.*?)(contents=(?P<content>.*)?)?$")
+        filedesrc_re = re.compile(
+            r"^\s+(?P<num>\d+)\s+name=\"(?P<name>[^\"]+)\"\s+type=\"(?P<type>[^\"]+)\""
+            r"\s+(size=(?P<size>.*))?creation-time=(?P<time>.*?)(contents=(?P<content>.*)?)?$"
+        )
         file_content_indent = re.compile(r"^\s{5}")
         out = []
         files = {}
@@ -799,7 +760,7 @@ class RosFormatter(CommonFormatter):
                 for key, _, context in items:
                     if key.startswith("remove"):
                         find_cmd = key.replace("remove", "", 1).strip()
-                        for (regex, repl_line) in rm_regexs:
+                        for regex, repl_line in rm_regexs:
                             find_cmd = regex.sub(repl_line, find_cmd)
                         cmd = "remove [ find " + find_cmd + " ]"
                     else:
@@ -834,14 +795,14 @@ def parse_to_tree(text, splitter, comments=("!", "#")):
 # =====
 def _stacked(lines, comments):
     stack = []
-    for (level, line) in _stripped_indents(lines, comments):
+    for level, line in _stripped_indents(lines, comments):
         level += 1
         if level > len(stack):
             stack.append(line)
         elif level == len(stack):
             stack[-1] = line
         else:
-            stack = stack[:level - 1] + [line]
+            stack = stack[: level - 1] + [line]
         yield tuple(stack)
 
 
@@ -850,7 +811,7 @@ def _stripped_indents(lines, comments):
     curr_level = 0
     g_level = None
 
-    for (number, (level, line)) in enumerate(_parsed_indents(lines, comments), start=1):
+    for number, (level, line) in enumerate(_parsed_indents(lines, comments), start=1):
         if isinstance(line, str):
             if g_level is None:
                 g_level = level
@@ -876,9 +837,25 @@ def _stripped_indents(lines, comments):
 
 
 def _parsed_indents(lines, comments):
+    cur_line = ""
+    multiline_command = False
     for line in _filtered_lines(lines, comments):
         if isinstance(line, str):
-            yield (_parse_indent(line), line.strip())
+            if line.startswith("banner motd C"):
+                multiline_command = True
+                cur_line = line
+                continue
+            elif line.endswith("C"):
+                cur_line += line
+                yield (_parse_indent(cur_line), cur_line.strip())
+                cur_line = ""
+                multiline_command = False
+            else:
+                if multiline_command:
+                    cur_line += f"\n{line}"
+                else:
+                    yield (_parse_indent(line), line.strip())
+
         else:
             yield (0, line)
 

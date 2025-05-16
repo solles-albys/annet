@@ -1,23 +1,30 @@
 import ssl
 
 from adaptix import P
-from adaptix.conversion import get_converter, link_function, link_constant, link
-from annetbox.v37 import models as api_models, client_sync
+from adaptix.conversion import get_converter, link, link_constant, link_function
+from annetbox.v37 import client_sync
+from annetbox.v37 import models as api_models
 
-from annet.adapters.netbox.common.adapter import NetboxAdapter, get_device_breed, get_device_hw
+from annet.adapters.netbox.common.adapter import (
+    NetboxAdapter,
+    get_connect_details,
+    get_device_breed,
+    get_device_hw,
+)
 from annet.adapters.netbox.common.storage_base import BaseNetboxStorage
 from annet.storage import Storage
-from .models import IpAddressV37, NetboxDeviceV37, InterfaceV37, PrefixV37
+
+from .models import InterfaceV37, IpAddressV37, NetboxDeviceV37, PrefixV37
 
 
 class NetboxV37Adapter(NetboxAdapter[NetboxDeviceV37, InterfaceV37, IpAddressV37, PrefixV37]):
     def __init__(
-            self,
-            storage: Storage,
-            url: str,
-            token: str,
-            ssl_context: ssl.SSLContext | None,
-            threads: int,
+        self,
+        storage: Storage,
+        url: str,
+        token: str,
+        ssl_context: ssl.SSLContext | None,
+        threads: int,
     ):
         self.netbox = client_sync.NetboxV37(url=url, token=token, ssl_context=ssl_context, threads=threads)
         self.convert_device = get_converter(
@@ -26,11 +33,12 @@ class NetboxV37Adapter(NetboxAdapter[NetboxDeviceV37, InterfaceV37, IpAddressV37
             recipe=[
                 link_function(get_device_breed, P[NetboxDeviceV37].breed),
                 link_function(get_device_hw, P[NetboxDeviceV37].hw),
+                link_function(get_connect_details, P[NetboxDeviceV37].connect_details),
                 link_constant(P[NetboxDeviceV37].interfaces, factory=list),
                 link_constant(P[NetboxDeviceV37].storage, value=storage),
                 link(P[api_models.Device].name, P[NetboxDeviceV37].hostname),
                 link(P[api_models.Device].name, P[NetboxDeviceV37].fqdn),
-            ]
+            ],
         )
         self.convert_interfaces = get_converter(
             list[api_models.Interface],
@@ -38,14 +46,14 @@ class NetboxV37Adapter(NetboxAdapter[NetboxDeviceV37, InterfaceV37, IpAddressV37
             recipe=[
                 link_constant(P[InterfaceV37].ip_addresses, factory=list),
                 link_constant(P[InterfaceV37].lag_min_links, value=None),
-            ]
+            ],
         )
         self.convert_ip_addresses = get_converter(
             list[api_models.IpAddress],
             list[IpAddressV37],
             recipe=[
                 link_constant(P[IpAddressV37].prefix, value=None),
-            ]
+            ],
         )
         self.convert_ip_prefixes = get_converter(
             list[api_models.Prefix],
@@ -53,16 +61,10 @@ class NetboxV37Adapter(NetboxAdapter[NetboxDeviceV37, InterfaceV37, IpAddressV37
         )
 
     def list_all_fqdns(self) -> list[str]:
-        return [
-            d.name
-            for d in self.netbox.dcim_all_devices_brief().results
-        ]
+        return [d.name for d in self.netbox.dcim_all_devices_brief().results]
 
     def list_devices(self, query: dict[str, list[str]]) -> list[NetboxDeviceV37]:
-        return [
-            self.convert_device(dev)
-            for dev in self.netbox.dcim_all_devices(**query).results
-        ]
+        return [self.convert_device(dev) for dev in self.netbox.dcim_all_devices(**query).results]
 
     def get_device(self, device_id: int) -> NetboxDeviceV37:
         return self.convert_device(self.netbox.dcim_device(device_id))
@@ -82,10 +84,10 @@ class NetboxV37Adapter(NetboxAdapter[NetboxDeviceV37, InterfaceV37, IpAddressV37
 
 class NetboxStorageV37(BaseNetboxStorage[NetboxDeviceV37, InterfaceV37, IpAddressV37, PrefixV37]):
     def _init_adapter(
-            self,
-            url: str,
-            token: str,
-            ssl_context: ssl.SSLContext | None,
-            threads: int,
+        self,
+        url: str,
+        token: str,
+        ssl_context: ssl.SSLContext | None,
+        threads: int,
     ) -> NetboxAdapter[NetboxDeviceV37, InterfaceV37, IpAddressV37, PrefixV37]:
         return NetboxV37Adapter(self, url, token, ssl_context, threads)
