@@ -100,8 +100,18 @@ class IpAddress(DumpableView, Generic[_PrefixT]):
 
 
 @dataclass
-class InterfaceConnectedEndpoint(Entity):
-    device: Entity
+class VirtualCircuit:
+    id: int
+    display: str
+    provider_network: Entity | None = None
+
+
+@dataclass
+class InterfaceConnectedEndpoint:
+    id: int
+    name: str | None = None
+    device: Entity | None = None
+    virtual_circuit: VirtualCircuit | None = None
 
 
 @dataclass

@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 import logging
+import os
 import sys
+import warnings
 
 import annet
-from annet import argparse, cli, generators, hardware, lib, rulebook, diff
-import warnings
+from annet import argparse, cli, diff, generators, hardware, lib, rulebook
 
 
 # =====
