@@ -4,6 +4,7 @@ import sys
 
 import annet
 from annet import argparse, cli, generators, hardware, lib, rulebook, diff
+import warnings
 
 
 # =====
@@ -30,4 +31,6 @@ def main():
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        sys.exit(main())
